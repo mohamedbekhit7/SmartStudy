@@ -307,4 +307,48 @@ class LocalDatabase {
         .where((submission) => submission.quizId == quizId)
         .toList();
   }
+
+  Future<void> gradeAssignmentSubmission({
+    required String submissionId,
+    required double grade,
+    required double maxGrade,
+    required String feedback,
+  }) async {
+    final submissions = await getSubmissions();
+
+    final updatedSubmissions = submissions.map((submission) {
+      if (submission.id != submissionId) return submission;
+
+      return submission.copyWith(
+        grade: grade,
+        maxGrade: maxGrade,
+        feedback: feedback,
+        gradedAt: DateTime.now(),
+      );
+    }).toList();
+
+    await saveSubmissions(updatedSubmissions);
+  }
+
+  Future<void> gradeQuizSubmission({
+    required String submissionId,
+    required double grade,
+    required double maxGrade,
+    required String feedback,
+  }) async {
+    final submissions = await getQuizSubmissions();
+
+    final updatedSubmissions = submissions.map((submission) {
+      if (submission.id != submissionId) return submission;
+
+      return submission.copyWith(
+        grade: grade,
+        maxGrade: maxGrade,
+        feedback: feedback,
+        gradedAt: DateTime.now(),
+      );
+    }).toList();
+
+    await saveQuizSubmissions(updatedSubmissions);
+  }
 }

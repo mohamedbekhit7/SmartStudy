@@ -7,7 +7,11 @@ class AssignmentSubmission {
   final String answerText;
   final String fileName;
   final String filePath;
+  final double? grade;
+  final double? maxGrade;
+  final String feedback;
   final DateTime submittedAt;
+  final DateTime? gradedAt;
 
   const AssignmentSubmission({
     required this.id,
@@ -18,10 +22,61 @@ class AssignmentSubmission {
     required this.answerText,
     required this.fileName,
     required this.filePath,
+    required this.grade,
+    required this.maxGrade,
+    required this.feedback,
     required this.submittedAt,
+    required this.gradedAt,
   });
 
   bool get hasFile => fileName.trim().isNotEmpty;
+  bool get isGraded => grade != null && maxGrade != null;
+
+  String get gradeLabel {
+    if (!isGraded) return 'Not graded yet';
+    return '${_formatNumber(grade!)} / ${_formatNumber(maxGrade!)}';
+  }
+
+  static String _formatNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(1);
+  }
+
+  AssignmentSubmission copyWith({
+    String? id,
+    String? assignmentId,
+    String? courseId,
+    String? studentId,
+    String? studentName,
+    String? answerText,
+    String? fileName,
+    String? filePath,
+    double? grade,
+    double? maxGrade,
+    String? feedback,
+    DateTime? submittedAt,
+    DateTime? gradedAt,
+    bool clearGrade = false,
+  }) {
+    return AssignmentSubmission(
+      id: id ?? this.id,
+      assignmentId: assignmentId ?? this.assignmentId,
+      courseId: courseId ?? this.courseId,
+      studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      answerText: answerText ?? this.answerText,
+      fileName: fileName ?? this.fileName,
+      filePath: filePath ?? this.filePath,
+      grade: clearGrade ? null : grade ?? this.grade,
+      maxGrade: clearGrade ? null : maxGrade ?? this.maxGrade,
+      feedback: feedback ?? this.feedback,
+      submittedAt: submittedAt ?? this.submittedAt,
+      gradedAt: clearGrade ? null : gradedAt ?? this.gradedAt,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -33,7 +88,11 @@ class AssignmentSubmission {
       'answerText': answerText,
       'fileName': fileName,
       'filePath': filePath,
+      'grade': grade,
+      'maxGrade': maxGrade,
+      'feedback': feedback,
       'submittedAt': submittedAt.toIso8601String(),
+      'gradedAt': gradedAt?.toIso8601String(),
     };
   }
 
@@ -47,8 +106,21 @@ class AssignmentSubmission {
       answerText: json['answerText'] as String? ?? '',
       fileName: json['fileName'] as String? ?? '',
       filePath: json['filePath'] as String? ?? '',
+      grade: _doubleFromJson(json['grade']),
+      maxGrade: _doubleFromJson(json['maxGrade']),
+      feedback: json['feedback'] as String? ?? '',
       submittedAt: DateTime.parse(json['submittedAt'] as String),
+      gradedAt: json['gradedAt'] == null || json['gradedAt'].toString().isEmpty
+          ? null
+          : DateTime.parse(json['gradedAt'] as String),
     );
+  }
+
+  static double? _doubleFromJson(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value.toDouble();
+    if (value is double) return value;
+    return double.tryParse(value.toString());
   }
 }
 
@@ -61,7 +133,11 @@ class QuizSubmission {
   final String note;
   final String fileName;
   final String filePath;
+  final double? grade;
+  final double? maxGrade;
+  final String feedback;
   final DateTime submittedAt;
+  final DateTime? gradedAt;
 
   const QuizSubmission({
     required this.id,
@@ -72,10 +148,61 @@ class QuizSubmission {
     required this.note,
     required this.fileName,
     required this.filePath,
+    required this.grade,
+    required this.maxGrade,
+    required this.feedback,
     required this.submittedAt,
+    required this.gradedAt,
   });
 
   bool get hasFile => fileName.trim().isNotEmpty;
+  bool get isGraded => grade != null && maxGrade != null;
+
+  String get gradeLabel {
+    if (!isGraded) return 'Not graded yet';
+    return '${_formatNumber(grade!)} / ${_formatNumber(maxGrade!)}';
+  }
+
+  static String _formatNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(1);
+  }
+
+  QuizSubmission copyWith({
+    String? id,
+    String? quizId,
+    String? courseId,
+    String? studentId,
+    String? studentName,
+    String? note,
+    String? fileName,
+    String? filePath,
+    double? grade,
+    double? maxGrade,
+    String? feedback,
+    DateTime? submittedAt,
+    DateTime? gradedAt,
+    bool clearGrade = false,
+  }) {
+    return QuizSubmission(
+      id: id ?? this.id,
+      quizId: quizId ?? this.quizId,
+      courseId: courseId ?? this.courseId,
+      studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      note: note ?? this.note,
+      fileName: fileName ?? this.fileName,
+      filePath: filePath ?? this.filePath,
+      grade: clearGrade ? null : grade ?? this.grade,
+      maxGrade: clearGrade ? null : maxGrade ?? this.maxGrade,
+      feedback: feedback ?? this.feedback,
+      submittedAt: submittedAt ?? this.submittedAt,
+      gradedAt: clearGrade ? null : gradedAt ?? this.gradedAt,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -87,7 +214,11 @@ class QuizSubmission {
       'note': note,
       'fileName': fileName,
       'filePath': filePath,
+      'grade': grade,
+      'maxGrade': maxGrade,
+      'feedback': feedback,
       'submittedAt': submittedAt.toIso8601String(),
+      'gradedAt': gradedAt?.toIso8601String(),
     };
   }
 
@@ -101,8 +232,21 @@ class QuizSubmission {
       note: json['note'] as String? ?? '',
       fileName: json['fileName'] as String? ?? '',
       filePath: json['filePath'] as String? ?? '',
+      grade: _doubleFromJson(json['grade']),
+      maxGrade: _doubleFromJson(json['maxGrade']),
+      feedback: json['feedback'] as String? ?? '',
       submittedAt: DateTime.parse(json['submittedAt'] as String),
+      gradedAt: json['gradedAt'] == null || json['gradedAt'].toString().isEmpty
+          ? null
+          : DateTime.parse(json['gradedAt'] as String),
     );
+  }
+
+  static double? _doubleFromJson(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value.toDouble();
+    if (value is double) return value;
+    return double.tryParse(value.toString());
   }
 }
 

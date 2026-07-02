@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../models/app_user.dart';
 import '../models/course.dart';
 import '../models/course_item.dart';
+import '../models/submission.dart';
 import '../services/local_database.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_background.dart';
@@ -11,10 +13,6 @@ import '../widgets/course_item_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import 'create_course_item_screen.dart';
-
-import 'package:open_filex/open_filex.dart';
-
-import '../models/submission.dart';
 import 'submit_course_item_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
@@ -206,6 +204,332 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     }
   }
 
+  Future<void> _showGradeDialog({
+    required String submissionId,
+    required bool isQuiz,
+    required String studentName,
+    double? currentGrade,
+    double? currentMaxGrade,
+    String currentFeedback = '',
+  }) async {
+    final gradeController = TextEditingController(
+      text: currentGrade == null ? '' : _formatGradeInput(currentGrade),
+    );
+    final maxGradeController = TextEditingController(
+      text: currentMaxGrade == null
+          ? '100'
+          : _formatGradeInput(currentMaxGrade),
+    );
+    final feedbackController = TextEditingController(text: currentFeedback);
+
+    String? errorMessage;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: Text(
+                'Grade $studentName',
+                style: const TextStyle(
+                  color: AppTheme.primaryIndigo,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: gradeController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Grade',
+                        prefixIcon: Icon(Icons.grade_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: maxGradeController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Maximum grade',
+                        prefixIcon: Icon(Icons.scoreboard_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: feedbackController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Feedback',
+                        prefixIcon: Icon(Icons.feedback_rounded),
+                      ),
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        errorMessage!,
+                        style: const TextStyle(
+                          color: AppTheme.pink,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final grade = double.tryParse(gradeController.text.trim());
+                    final maxGrade = double.tryParse(
+                      maxGradeController.text.trim(),
+                    );
+
+                    if (grade == null || maxGrade == null) {
+                      setDialogState(() {
+                        errorMessage = 'Please enter valid numbers.';
+                      });
+                      return;
+                    }
+
+                    if (maxGrade <= 0) {
+                      setDialogState(() {
+                        errorMessage =
+                            'Maximum grade must be greater than zero.';
+                      });
+                      return;
+                    }
+
+                    if (grade < 0 || grade > maxGrade) {
+                      setDialogState(() {
+                        errorMessage =
+                            'Grade must be between 0 and the maximum grade.';
+                      });
+                      return;
+                    }
+
+                    if (isQuiz) {
+                      await _database.gradeQuizSubmission(
+                        submissionId: submissionId,
+                        grade: grade,
+                        maxGrade: maxGrade,
+                        feedback: feedbackController.text.trim(),
+                      );
+                    } else {
+                      await _database.gradeAssignmentSubmission(
+                        submissionId: submissionId,
+                        grade: grade,
+                        maxGrade: maxGrade,
+                        feedback: feedbackController.text.trim(),
+                      );
+                    }
+
+                    if (Navigator.of(dialogContext).canPop()) {
+                      Navigator.of(dialogContext).pop();
+                    }
+
+                    if (!mounted) return;
+
+                    await Future.delayed(const Duration(milliseconds: 120));
+
+                    if (!mounted) return;
+
+                    await _loadData();
+
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$studentName was graded successfully.'),
+                      ),
+                    );
+                  },
+                  child: const Text('Save Grade'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    gradeController.dispose();
+    maxGradeController.dispose();
+    feedbackController.dispose();
+  }
+
+  void _showInstructorSubmissions(CourseItem item) {
+    final isQuiz = item.isQuiz;
+
+    final submissions = isQuiz
+        ? _quizSubmissions
+              .where((submission) => submission.quizId == item.id)
+              .toList()
+        : _assignmentSubmissions
+              .where((submission) => submission.assignmentId == item.id)
+              .toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+          child: GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.72,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.fact_check_rounded,
+                        color: AppTheme.primaryIndigo,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${item.title} Submissions',
+                          style: const TextStyle(
+                            color: AppTheme.primaryIndigo,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (submissions.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'No students have submitted this ${isQuiz ? 'quiz' : 'assignment'} yet.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppTheme.darkText.withValues(alpha: 0.62),
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: submissions.length,
+                        itemBuilder: (context, index) {
+                          final submission = submissions[index];
+
+                          if (submission is QuizSubmission) {
+                            return _SubmissionReviewCard(
+                              studentName: submission.studentName,
+                              fileName: submission.fileName,
+                              submittedAt: submission.submittedAt,
+                              gradeLabel: submission.gradeLabel,
+                              isGraded: submission.isGraded,
+                              studentNote: submission.note,
+                              feedback: submission.feedback,
+                              onOpenFile: () => _openSubmissionFile(
+                                filePath: submission.filePath,
+                              ),
+                              onGrade: () {
+                                Navigator.of(context).pop();
+
+                                Future.delayed(
+                                  const Duration(milliseconds: 180),
+                                  () {
+                                    if (!mounted) return;
+
+                                    _showGradeDialog(
+                                      submissionId: submission.id,
+                                      isQuiz: true,
+                                      studentName: submission.studentName,
+                                      currentGrade: submission.grade,
+                                      currentMaxGrade: submission.maxGrade,
+                                      currentFeedback: submission.feedback,
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          }
+
+                          final assignmentSubmission =
+                              submission as AssignmentSubmission;
+
+                          return _SubmissionReviewCard(
+                            studentName: assignmentSubmission.studentName,
+                            fileName: assignmentSubmission.fileName,
+                            submittedAt: assignmentSubmission.submittedAt,
+                            gradeLabel: assignmentSubmission.gradeLabel,
+                            isGraded: assignmentSubmission.isGraded,
+                            studentNote: assignmentSubmission.answerText,
+                            feedback: assignmentSubmission.feedback,
+                            onOpenFile: () => _openSubmissionFile(
+                              filePath: assignmentSubmission.filePath,
+                            ),
+                            onGrade: () {
+                              Navigator.of(context).pop();
+
+                              Future.delayed(
+                                const Duration(milliseconds: 180),
+                                () {
+                                  if (!mounted) return;
+
+                                  _showGradeDialog(
+                                    submissionId: assignmentSubmission.id,
+                                    isQuiz: false,
+                                    studentName:
+                                        assignmentSubmission.studentName,
+                                    currentGrade: assignmentSubmission.grade,
+                                    currentMaxGrade:
+                                        assignmentSubmission.maxGrade,
+                                    currentFeedback:
+                                        assignmentSubmission.feedback,
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatGradeInput(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(1);
+  }
+
   Future<void> _submitItem(CourseItem item) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -326,6 +650,32 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                       label: 'Your file',
                       value: quizSubmission.fileName,
                     ),
+                  if (assignmentSubmission != null)
+                    _DetailRow(
+                      icon: Icons.grade_rounded,
+                      label: 'Grade',
+                      value: assignmentSubmission.gradeLabel,
+                    ),
+                  if (assignmentSubmission != null &&
+                      assignmentSubmission.feedback.trim().isNotEmpty)
+                    _DetailRow(
+                      icon: Icons.feedback_rounded,
+                      label: 'Feedback',
+                      value: assignmentSubmission.feedback,
+                    ),
+                  if (quizSubmission != null)
+                    _DetailRow(
+                      icon: Icons.grade_rounded,
+                      label: 'Grade',
+                      value: quizSubmission.gradeLabel,
+                    ),
+                  if (quizSubmission != null &&
+                      quizSubmission.feedback.trim().isNotEmpty)
+                    _DetailRow(
+                      icon: Icons.feedback_rounded,
+                      label: 'Feedback',
+                      value: quizSubmission.feedback,
+                    ),
                   const SizedBox(height: 18),
                   if (item.hasFile)
                     _ActionButton(
@@ -337,6 +687,21 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         _openAttachedFile(item);
                       },
                     ),
+
+                  if (widget.currentUser.isInstructor &&
+                      (item.isAssignment || item.isQuiz)) ...[
+                    const SizedBox(height: 10),
+                    _ActionButton(
+                      text: 'Review Submissions',
+                      icon: Icons.fact_check_rounded,
+                      isPrimary: !item.hasFile,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _showInstructorSubmissions(item);
+                      },
+                    ),
+                  ],
+
                   if (widget.currentUser.isStudent &&
                       (item.isAssignment || item.isQuiz)) ...[
                     const SizedBox(height: 10),
@@ -1042,6 +1407,305 @@ class _ActionButton extends StatelessWidget {
               style: TextStyle(
                 color: isPrimary ? Colors.white : AppTheme.primaryIndigo,
                 fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubmissionReviewCard extends StatelessWidget {
+  final String studentName;
+  final String fileName;
+  final DateTime submittedAt;
+  final String gradeLabel;
+  final bool isGraded;
+  final String studentNote;
+  final String feedback;
+  final VoidCallback onOpenFile;
+  final VoidCallback onGrade;
+
+  const _SubmissionReviewCard({
+    required this.studentName,
+    required this.fileName,
+    required this.submittedAt,
+    required this.gradeLabel,
+    required this.isGraded,
+    required this.studentNote,
+    required this.feedback,
+    required this.onOpenFile,
+    required this.onGrade,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final submittedDate = DateFormat(
+      'MMM d, yyyy - h:mm a',
+    ).format(submittedAt);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.66),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primaryIndigo, AppTheme.violet],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.person_rounded, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      studentName,
+                      style: const TextStyle(
+                        color: AppTheme.primaryIndigo,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15.5,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      submittedDate,
+                      style: TextStyle(
+                        color: AppTheme.darkText.withValues(alpha: 0.5),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isGraded
+                      ? AppTheme.cyan.withValues(alpha: 0.13)
+                      : AppTheme.pink.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Text(
+                  gradeLabel,
+                  style: TextStyle(
+                    color: isGraded ? AppTheme.primaryIndigo : AppTheme.pink,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.attach_file_rounded,
+                color: AppTheme.violet,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  fileName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppTheme.darkText.withValues(alpha: 0.64),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (studentNote.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryIndigo.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppTheme.primaryIndigo.withValues(alpha: 0.10),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.notes_rounded,
+                        color: AppTheme.primaryIndigo,
+                        size: 16,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Student note',
+                        style: TextStyle(
+                          color: AppTheme.primaryIndigo,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    studentNote,
+                    style: TextStyle(
+                      color: AppTheme.darkText.withValues(alpha: 0.66),
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (feedback.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: AppTheme.cyan.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppTheme.cyan.withValues(alpha: 0.18),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.feedback_rounded,
+                        color: AppTheme.primaryIndigo,
+                        size: 16,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Instructor feedback',
+                        style: TextStyle(
+                          color: AppTheme.primaryIndigo,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    feedback,
+                    style: TextStyle(
+                      color: AppTheme.darkText.withValues(alpha: 0.66),
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _SmallSubmissionButton(
+                  text: 'Open File',
+                  icon: Icons.file_open_rounded,
+                  isPrimary: false,
+                  onTap: onOpenFile,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SmallSubmissionButton(
+                  text: isGraded ? 'Edit Grade' : 'Grade',
+                  icon: Icons.grade_rounded,
+                  isPrimary: true,
+                  onTap: onGrade,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallSubmissionButton extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final bool isPrimary;
+  final VoidCallback onTap;
+
+  const _SmallSubmissionButton({
+    required this.text,
+    required this.icon,
+    required this.isPrimary,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 42,
+        decoration: BoxDecoration(
+          gradient: isPrimary
+              ? const LinearGradient(
+                  colors: [AppTheme.primaryIndigo, AppTheme.violet],
+                )
+              : null,
+          color: isPrimary ? null : Colors.white.withValues(alpha: 0.74),
+          borderRadius: BorderRadius.circular(14),
+          border: isPrimary
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.85)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 17,
+              color: isPrimary ? Colors.white : AppTheme.primaryIndigo,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              text,
+              style: TextStyle(
+                color: isPrimary ? Colors.white : AppTheme.primaryIndigo,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
               ),
             ),
           ],

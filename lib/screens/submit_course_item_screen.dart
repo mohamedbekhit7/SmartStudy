@@ -123,7 +123,11 @@ class _SubmitCourseItemScreenState extends State<SubmitCourseItemScreen>
         note: _noteController.text.trim(),
         fileName: _selectedFileName,
         filePath: _selectedFilePath,
+        grade: null,
+        maxGrade: null,
+        feedback: '',
         submittedAt: DateTime.now(),
+        gradedAt: null,
       );
 
       await _database.addQuizSubmission(submission);
@@ -137,7 +141,11 @@ class _SubmitCourseItemScreenState extends State<SubmitCourseItemScreen>
         answerText: _noteController.text.trim(),
         fileName: _selectedFileName,
         filePath: _selectedFilePath,
+        grade: null,
+        maxGrade: null,
+        feedback: '',
         submittedAt: DateTime.now(),
+        gradedAt: null,
       );
 
       await _database.addSubmission(submission);
