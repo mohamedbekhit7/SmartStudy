@@ -215,17 +215,21 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     final gradeController = TextEditingController(
       text: currentGrade == null ? '' : _formatGradeInput(currentGrade),
     );
+
     final maxGradeController = TextEditingController(
       text: currentMaxGrade == null
           ? '100'
           : _formatGradeInput(currentMaxGrade),
     );
+
     final feedbackController = TextEditingController(text: currentFeedback);
 
     String? errorMessage;
+    bool isSaving = false;
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: !isSaving,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -284,80 +288,105 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         ),
                       ),
                     ],
+                    if (isSaving) ...[
+                      const SizedBox(height: 14),
+                      const CircularProgressIndicator(),
+                    ],
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          FocusScope.of(dialogContext).unfocus();
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () async {
-                    final grade = double.tryParse(gradeController.text.trim());
-                    final maxGrade = double.tryParse(
-                      maxGradeController.text.trim(),
-                    );
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          FocusScope.of(dialogContext).unfocus();
 
-                    if (grade == null || maxGrade == null) {
-                      setDialogState(() {
-                        errorMessage = 'Please enter valid numbers.';
-                      });
-                      return;
-                    }
+                          final grade = double.tryParse(
+                            gradeController.text.trim(),
+                          );
 
-                    if (maxGrade <= 0) {
-                      setDialogState(() {
-                        errorMessage =
-                            'Maximum grade must be greater than zero.';
-                      });
-                      return;
-                    }
+                          final maxGrade = double.tryParse(
+                            maxGradeController.text.trim(),
+                          );
 
-                    if (grade < 0 || grade > maxGrade) {
-                      setDialogState(() {
-                        errorMessage =
-                            'Grade must be between 0 and the maximum grade.';
-                      });
-                      return;
-                    }
+                          if (grade == null || maxGrade == null) {
+                            setDialogState(() {
+                              errorMessage = 'Please enter valid numbers.';
+                            });
+                            return;
+                          }
 
-                    if (isQuiz) {
-                      await _database.gradeQuizSubmission(
-                        submissionId: submissionId,
-                        grade: grade,
-                        maxGrade: maxGrade,
-                        feedback: feedbackController.text.trim(),
-                      );
-                    } else {
-                      await _database.gradeAssignmentSubmission(
-                        submissionId: submissionId,
-                        grade: grade,
-                        maxGrade: maxGrade,
-                        feedback: feedbackController.text.trim(),
-                      );
-                    }
+                          if (maxGrade <= 0) {
+                            setDialogState(() {
+                              errorMessage =
+                                  'Maximum grade must be greater than zero.';
+                            });
+                            return;
+                          }
 
-                    if (Navigator.of(dialogContext).canPop()) {
-                      Navigator.of(dialogContext).pop();
-                    }
+                          if (grade < 0 || grade > maxGrade) {
+                            setDialogState(() {
+                              errorMessage =
+                                  'Grade must be between 0 and the maximum grade.';
+                            });
+                            return;
+                          }
 
-                    if (!mounted) return;
+                          setDialogState(() {
+                            isSaving = true;
+                            errorMessage = null;
+                          });
 
-                    await Future.delayed(const Duration(milliseconds: 120));
+                          if (isQuiz) {
+                            await _database.gradeQuizSubmission(
+                              submissionId: submissionId,
+                              grade: grade,
+                              maxGrade: maxGrade,
+                              feedback: feedbackController.text.trim(),
+                            );
+                          } else {
+                            await _database.gradeAssignmentSubmission(
+                              submissionId: submissionId,
+                              grade: grade,
+                              maxGrade: maxGrade,
+                              feedback: feedbackController.text.trim(),
+                            );
+                          }
 
-                    if (!mounted) return;
+                          if (!dialogContext.mounted) return;
 
-                    await _loadData();
+                          Navigator.of(dialogContext).pop();
 
-                    if (!mounted) return;
+                          if (!mounted) return;
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('$studentName was graded successfully.'),
-                      ),
-                    );
-                  },
+                          await Future.delayed(
+                            const Duration(milliseconds: 180),
+                          );
+
+                          if (!mounted) return;
+
+                          await _loadData();
+
+                          if (!mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '$studentName was graded successfully.',
+                              ),
+                            ),
+                          );
+                        },
                   child: const Text('Save Grade'),
                 ),
               ],
@@ -366,10 +395,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         );
       },
     );
-
-    gradeController.dispose();
-    maxGradeController.dispose();
-    feedbackController.dispose();
   }
 
   void _showInstructorSubmissions(CourseItem item) {
