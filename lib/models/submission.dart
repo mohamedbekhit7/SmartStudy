@@ -5,6 +5,8 @@ class AssignmentSubmission {
   final String studentId;
   final String studentName;
   final String answerText;
+  final String fileName;
+  final String filePath;
   final DateTime submittedAt;
 
   const AssignmentSubmission({
@@ -14,8 +16,12 @@ class AssignmentSubmission {
     required this.studentId,
     required this.studentName,
     required this.answerText,
+    required this.fileName,
+    required this.filePath,
     required this.submittedAt,
   });
+
+  bool get hasFile => fileName.trim().isNotEmpty;
 
   Map<String, dynamic> toJson() {
     return {
@@ -25,6 +31,8 @@ class AssignmentSubmission {
       'studentId': studentId,
       'studentName': studentName,
       'answerText': answerText,
+      'fileName': fileName,
+      'filePath': filePath,
       'submittedAt': submittedAt.toIso8601String(),
     };
   }
@@ -36,7 +44,63 @@ class AssignmentSubmission {
       courseId: json['courseId'] as String,
       studentId: json['studentId'] as String,
       studentName: json['studentName'] as String,
-      answerText: json['answerText'] as String,
+      answerText: json['answerText'] as String? ?? '',
+      fileName: json['fileName'] as String? ?? '',
+      filePath: json['filePath'] as String? ?? '',
+      submittedAt: DateTime.parse(json['submittedAt'] as String),
+    );
+  }
+}
+
+class QuizSubmission {
+  final String id;
+  final String quizId;
+  final String courseId;
+  final String studentId;
+  final String studentName;
+  final String note;
+  final String fileName;
+  final String filePath;
+  final DateTime submittedAt;
+
+  const QuizSubmission({
+    required this.id,
+    required this.quizId,
+    required this.courseId,
+    required this.studentId,
+    required this.studentName,
+    required this.note,
+    required this.fileName,
+    required this.filePath,
+    required this.submittedAt,
+  });
+
+  bool get hasFile => fileName.trim().isNotEmpty;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'quizId': quizId,
+      'courseId': courseId,
+      'studentId': studentId,
+      'studentName': studentName,
+      'note': note,
+      'fileName': fileName,
+      'filePath': filePath,
+      'submittedAt': submittedAt.toIso8601String(),
+    };
+  }
+
+  factory QuizSubmission.fromJson(Map<String, dynamic> json) {
+    return QuizSubmission(
+      id: json['id'] as String,
+      quizId: json['quizId'] as String,
+      courseId: json['courseId'] as String,
+      studentId: json['studentId'] as String,
+      studentName: json['studentName'] as String,
+      note: json['note'] as String? ?? '',
+      fileName: json['fileName'] as String? ?? '',
+      filePath: json['filePath'] as String? ?? '',
       submittedAt: DateTime.parse(json['submittedAt'] as String),
     );
   }

@@ -12,6 +12,11 @@ import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import 'create_course_item_screen.dart';
 
+import 'package:open_filex/open_filex.dart';
+
+import '../models/submission.dart';
+import 'submit_course_item_screen.dart';
+
 class CourseDetailScreen extends StatefulWidget {
   final AppUser currentUser;
   final Course course;
@@ -32,6 +37,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
   List<CourseItem> _items = [];
   List<AppUser> _users = [];
+
+  List<AssignmentSubmission> _assignmentSubmissions = [];
+  List<QuizSubmission> _quizSubmissions = [];
+
   bool _isLoading = true;
 
   late final TabController _tabController;
@@ -74,6 +83,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   Future<void> _loadData() async {
     final items = await _database.getItemsForCourse(widget.course.id);
     final users = await _database.getUsers();
+    final assignmentSubmissions = await _database.getSubmissions();
+    final quizSubmissions = await _database.getQuizSubmissions();
 
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -82,6 +93,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     setState(() {
       _items = items;
       _users = users;
+      _assignmentSubmissions = assignmentSubmissions;
+      _quizSubmissions = quizSubmissions;
       _isLoading = false;
     });
   }
@@ -99,10 +112,129 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     await _loadData();
   }
 
+  AssignmentSubmission? _assignmentSubmissionForCurrentStudent(String itemId) {
+    for (final submission in _assignmentSubmissions) {
+      if (submission.assignmentId == itemId &&
+          submission.studentId == widget.currentUser.id) {
+        return submission;
+      }
+    }
+
+    return null;
+  }
+
+  QuizSubmission? _quizSubmissionForCurrentStudent(String itemId) {
+    for (final submission in _quizSubmissions) {
+      if (submission.quizId == itemId &&
+          submission.studentId == widget.currentUser.id) {
+        return submission;
+      }
+    }
+
+    return null;
+  }
+
+  int _submissionCountForItem(CourseItem item) {
+    if (item.isAssignment) {
+      return _assignmentSubmissions
+          .where((submission) => submission.assignmentId == item.id)
+          .length;
+    }
+
+    if (item.isQuiz) {
+      return _quizSubmissions
+          .where((submission) => submission.quizId == item.id)
+          .length;
+    }
+
+    return 0;
+  }
+
+  bool _studentSubmittedItem(CourseItem item) {
+    if (item.isAssignment) {
+      return _assignmentSubmissionForCurrentStudent(item.id) != null;
+    }
+
+    if (item.isQuiz) {
+      return _quizSubmissionForCurrentStudent(item.id) != null;
+    }
+
+    return false;
+  }
+
+  Future<void> _openAttachedFile(CourseItem item) async {
+    if (item.filePath.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No local file path is available for this attachment.'),
+        ),
+      );
+      return;
+    }
+
+    final result = await OpenFilex.open(item.filePath);
+
+    if (!mounted) return;
+
+    if (result.type != ResultType.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file: ${result.message}')),
+      );
+    }
+  }
+
+  Future<void> _openSubmissionFile({required String filePath}) async {
+    if (filePath.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No local file path is available for this submission.'),
+        ),
+      );
+      return;
+    }
+
+    final result = await OpenFilex.open(filePath);
+
+    if (!mounted) return;
+
+    if (result.type != ResultType.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open submission file: ${result.message}'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _submitItem(CourseItem item) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => SubmitCourseItemScreen(
+          currentUser: widget.currentUser,
+          course: widget.course,
+          item: item,
+        ),
+      ),
+    );
+
+    if (changed == true) {
+      await _loadData();
+    }
+  }
+
   void _showItemDetails(CourseItem item) {
     final createdDate = DateFormat(
       'MMM d, yyyy - h:mm a',
     ).format(item.createdAt);
+
+    final hasStudentSubmitted = _studentSubmittedItem(item);
+    final submissionCount = _submissionCountForItem(item);
+    final assignmentSubmission = item.isAssignment
+        ? _assignmentSubmissionForCurrentStudent(item.id)
+        : null;
+    final quizSubmission = item.isQuiz
+        ? _quizSubmissionForCurrentStudent(item.id)
+        : null;
 
     showModalBottomSheet(
       context: context,
@@ -113,57 +245,141 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
           child: GlassCard(
             padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    color: AppTheme.primaryIndigo,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    letterSpacing: -0.5,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      color: AppTheme.primaryIndigo,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.typeLabel,
-                  style: const TextStyle(
-                    color: AppTheme.violet,
-                    fontWeight: FontWeight.w900,
+                  const SizedBox(height: 8),
+                  Text(
+                    item.typeLabel,
+                    style: const TextStyle(
+                      color: AppTheme.violet,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  item.description.isEmpty
-                      ? 'No description was added.'
-                      : item.description,
-                  style: TextStyle(
-                    color: AppTheme.darkText.withValues(alpha: 0.68),
-                    fontWeight: FontWeight.w600,
-                    height: 1.45,
+                  const SizedBox(height: 14),
+                  Text(
+                    item.description.isEmpty
+                        ? 'No description was added.'
+                        : item.description,
+                    style: TextStyle(
+                      color: AppTheme.darkText.withValues(alpha: 0.68),
+                      fontWeight: FontWeight.w600,
+                      height: 1.45,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                _DetailRow(
-                  icon: Icons.calendar_month_rounded,
-                  label: 'Created',
-                  value: createdDate,
-                ),
-                if (item.dueDate.isNotEmpty)
+                  const SizedBox(height: 14),
                   _DetailRow(
-                    icon: Icons.timer_rounded,
-                    label: 'Due date',
-                    value: item.dueDate,
+                    icon: Icons.calendar_month_rounded,
+                    label: 'Created',
+                    value: createdDate,
                   ),
-                if (item.hasFile)
-                  _DetailRow(
-                    icon: Icons.attach_file_rounded,
-                    label: 'Uploaded file',
-                    value: item.fileName,
-                  ),
-              ],
+                  if (item.dueDate.isNotEmpty)
+                    _DetailRow(
+                      icon: Icons.timer_rounded,
+                      label: 'Due date',
+                      value: item.dueDate,
+                    ),
+                  if (item.hasFile)
+                    _DetailRow(
+                      icon: Icons.attach_file_rounded,
+                      label: 'Attached file',
+                      value: item.fileName,
+                    ),
+                  if (widget.currentUser.isInstructor &&
+                      (item.isAssignment || item.isQuiz))
+                    _DetailRow(
+                      icon: Icons.people_alt_rounded,
+                      label: 'Submissions',
+                      value: '$submissionCount received',
+                    ),
+                  if (widget.currentUser.isStudent &&
+                      (item.isAssignment || item.isQuiz))
+                    _DetailRow(
+                      icon: hasStudentSubmitted
+                          ? Icons.check_circle_rounded
+                          : Icons.pending_actions_rounded,
+                      label: 'Your status',
+                      value: hasStudentSubmitted
+                          ? 'Submitted'
+                          : 'Not submitted yet',
+                    ),
+                  if (assignmentSubmission != null)
+                    _DetailRow(
+                      icon: Icons.upload_file_rounded,
+                      label: 'Your file',
+                      value: assignmentSubmission.fileName,
+                    ),
+                  if (quizSubmission != null)
+                    _DetailRow(
+                      icon: Icons.upload_file_rounded,
+                      label: 'Your file',
+                      value: quizSubmission.fileName,
+                    ),
+                  const SizedBox(height: 18),
+                  if (item.hasFile)
+                    _ActionButton(
+                      text: 'Open Attached File',
+                      icon: Icons.visibility_rounded,
+                      isPrimary: true,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _openAttachedFile(item);
+                      },
+                    ),
+                  if (widget.currentUser.isStudent &&
+                      (item.isAssignment || item.isQuiz)) ...[
+                    const SizedBox(height: 10),
+                    _ActionButton(
+                      text: hasStudentSubmitted
+                          ? 'Replace Submission'
+                          : 'Upload Submission',
+                      icon: Icons.cloud_upload_rounded,
+                      isPrimary: !item.hasFile,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _submitItem(item);
+                      },
+                    ),
+                  ],
+                  if (assignmentSubmission != null) ...[
+                    const SizedBox(height: 10),
+                    _ActionButton(
+                      text: 'Open My Submission',
+                      icon: Icons.file_open_rounded,
+                      isPrimary: false,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _openSubmissionFile(
+                          filePath: assignmentSubmission.filePath,
+                        );
+                      },
+                    ),
+                  ],
+                  if (quizSubmission != null) ...[
+                    const SizedBox(height: 10),
+                    _ActionButton(
+                      text: 'Open My Submission',
+                      icon: Icons.file_open_rounded,
+                      isPrimary: false,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _openSubmissionFile(filePath: quizSubmission.filePath);
+                      },
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         );
@@ -760,6 +976,76 @@ class _PersonCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final bool isPrimary;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.text,
+    required this.icon,
+    required this.isPrimary,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final gradient = isPrimary
+        ? const LinearGradient(
+            colors: [AppTheme.primaryIndigo, AppTheme.violet],
+          )
+        : LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.88),
+              Colors.white.withValues(alpha: 0.62),
+            ],
+          );
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(17),
+          border: isPrimary
+              ? null
+              : Border.all(color: Colors.white.withValues(alpha: 0.75)),
+          boxShadow: [
+            BoxShadow(
+              color: isPrimary
+                  ? AppTheme.violet.withValues(alpha: 0.22)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isPrimary ? Colors.white : AppTheme.primaryIndigo,
+              size: 20,
+            ),
+            const SizedBox(width: 9),
+            Text(
+              text,
+              style: TextStyle(
+                color: isPrimary ? Colors.white : AppTheme.primaryIndigo,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

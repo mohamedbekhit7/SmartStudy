@@ -13,6 +13,7 @@ class LocalDatabase {
   static const String _itemsKey = 'smartstudy_course_items';
   static const String _submissionsKey = 'smartstudy_assignment_submissions';
   static const String _quizResultsKey = 'smartstudy_quiz_results';
+  static const String _quizSubmissionsKey = 'smartstudy_quiz_submissions';
 
   Future<List<AppUser>> getUsers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -190,6 +191,31 @@ class LocalDatabase {
     await saveSubmissions(withoutPrevious);
   }
 
+  Future<AssignmentSubmission?> getAssignmentSubmissionForStudent({
+    required String assignmentId,
+    required String studentId,
+  }) async {
+    final submissions = await getSubmissions();
+
+    for (final submission in submissions) {
+      if (submission.assignmentId == assignmentId &&
+          submission.studentId == studentId) {
+        return submission;
+      }
+    }
+
+    return null;
+  }
+
+  Future<List<AssignmentSubmission>> getSubmissionsForAssignment(
+    String assignmentId,
+  ) async {
+    final submissions = await getSubmissions();
+    return submissions
+        .where((submission) => submission.assignmentId == assignmentId)
+        .toList();
+  }
+
   Future<List<QuizResult>> getQuizResults() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_quizResultsKey);
@@ -223,5 +249,62 @@ class LocalDatabase {
 
     withoutPrevious.add(result);
     await saveQuizResults(withoutPrevious);
+  }
+
+  Future<List<QuizSubmission>> getQuizSubmissions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_quizSubmissionsKey);
+
+    if (raw == null || raw.isEmpty) return [];
+
+    final decoded = jsonDecode(raw) as List;
+    return decoded
+        .map((item) => QuizSubmission.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  Future<void> saveQuizSubmissions(List<QuizSubmission> submissions) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(
+      submissions.map((submission) => submission.toJson()).toList(),
+    );
+    await prefs.setString(_quizSubmissionsKey, encoded);
+  }
+
+  Future<void> addQuizSubmission(QuizSubmission submission) async {
+    final submissions = await getQuizSubmissions();
+
+    final withoutPrevious = submissions
+        .where(
+          (item) =>
+              !(item.quizId == submission.quizId &&
+                  item.studentId == submission.studentId),
+        )
+        .toList();
+
+    withoutPrevious.add(submission);
+    await saveQuizSubmissions(withoutPrevious);
+  }
+
+  Future<QuizSubmission?> getQuizSubmissionForStudent({
+    required String quizId,
+    required String studentId,
+  }) async {
+    final submissions = await getQuizSubmissions();
+
+    for (final submission in submissions) {
+      if (submission.quizId == quizId && submission.studentId == studentId) {
+        return submission;
+      }
+    }
+
+    return null;
+  }
+
+  Future<List<QuizSubmission>> getSubmissionsForQuiz(String quizId) async {
+    final submissions = await getQuizSubmissions();
+    return submissions
+        .where((submission) => submission.quizId == quizId)
+        .toList();
   }
 }
