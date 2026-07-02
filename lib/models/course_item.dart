@@ -8,6 +8,8 @@ class CourseItem {
   final String description;
   final String link;
   final String dueDate;
+  final String fileName;
+  final String filePath;
   final String question;
   final List<String> choices;
   final int correctChoiceIndex;
@@ -22,6 +24,8 @@ class CourseItem {
     required this.description,
     required this.link,
     required this.dueDate,
+    required this.fileName,
+    required this.filePath,
     required this.question,
     required this.choices,
     required this.correctChoiceIndex,
@@ -32,6 +36,7 @@ class CourseItem {
   bool get isMaterial => type == CourseItemType.material;
   bool get isAssignment => type == CourseItemType.assignment;
   bool get isQuiz => type == CourseItemType.quiz;
+  bool get hasFile => fileName.trim().isNotEmpty;
 
   String get typeLabel {
     switch (type) {
@@ -52,6 +57,8 @@ class CourseItem {
     String? description,
     String? link,
     String? dueDate,
+    String? fileName,
+    String? filePath,
     String? question,
     List<String>? choices,
     int? correctChoiceIndex,
@@ -66,6 +73,8 @@ class CourseItem {
       description: description ?? this.description,
       link: link ?? this.link,
       dueDate: dueDate ?? this.dueDate,
+      fileName: fileName ?? this.fileName,
+      filePath: filePath ?? this.filePath,
       question: question ?? this.question,
       choices: choices ?? this.choices,
       correctChoiceIndex: correctChoiceIndex ?? this.correctChoiceIndex,
@@ -83,6 +92,8 @@ class CourseItem {
       'description': description,
       'link': link,
       'dueDate': dueDate,
+      'fileName': fileName,
+      'filePath': filePath,
       'question': question,
       'choices': choices,
       'correctChoiceIndex': correctChoiceIndex,
@@ -100,6 +111,8 @@ class CourseItem {
       description: json['description'] as String? ?? '',
       link: json['link'] as String? ?? '',
       dueDate: json['dueDate'] as String? ?? '',
+      fileName: json['fileName'] as String? ?? '',
+      filePath: json['filePath'] as String? ?? '',
       question: json['question'] as String? ?? '',
       choices: List<String>.from(json['choices'] as List? ?? []),
       correctChoiceIndex: json['correctChoiceIndex'] as int? ?? 0,

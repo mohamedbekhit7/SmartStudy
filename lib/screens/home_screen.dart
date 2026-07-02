@@ -15,6 +15,7 @@ import '../widgets/glass_card.dart';
 import 'create_course_screen.dart';
 import 'join_course_screen.dart';
 import 'landing_screen.dart';
+import 'course_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppUser currentUser;
@@ -124,9 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openCourse(Course course) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${course.name} details will be added in Phase 6.'),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            CourseDetailScreen(currentUser: widget.currentUser, course: course),
       ),
     );
   }
