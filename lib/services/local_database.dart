@@ -117,9 +117,7 @@ class LocalDatabase {
         return course;
       }
 
-      return course.copyWith(
-        studentIds: [...course.studentIds, studentId],
-      );
+      return course.copyWith(studentIds: [...course.studentIds, studentId]);
     }).toList();
 
     await saveCourses(updatedCourses);
@@ -163,9 +161,8 @@ class LocalDatabase {
     final decoded = jsonDecode(raw) as List;
     return decoded
         .map(
-          (item) => AssignmentSubmission.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) =>
+              AssignmentSubmission.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList();
   }
@@ -207,7 +204,9 @@ class LocalDatabase {
 
   Future<void> saveQuizResults(List<QuizResult> results) async {
     final prefs = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(results.map((result) => result.toJson()).toList());
+    final encoded = jsonEncode(
+      results.map((result) => result.toJson()).toList(),
+    );
     await prefs.setString(_quizResultsKey, encoded);
   }
 

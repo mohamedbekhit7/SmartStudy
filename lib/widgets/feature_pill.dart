@@ -15,16 +15,11 @@ class FeaturePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.72),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -33,10 +28,7 @@ class FeaturePill extends StatelessWidget {
           const SizedBox(width: 7),
           Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
           ),
         ],
       ),

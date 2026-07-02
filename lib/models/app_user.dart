@@ -1,7 +1,4 @@
-enum UserRole {
-  student,
-  instructor,
-}
+enum UserRole { student, instructor }
 
 class AppUser {
   final String id;

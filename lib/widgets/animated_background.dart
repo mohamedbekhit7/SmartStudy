@@ -8,10 +8,7 @@ import '../theme/app_theme.dart';
 class AnimatedBackground extends StatefulWidget {
   final Widget child;
 
-  const AnimatedBackground({
-    super.key,
-    required this.child,
-  });
+  const AnimatedBackground({super.key, required this.child});
 
   @override
   State<AnimatedBackground> createState() => _AnimatedBackgroundState();
@@ -186,10 +183,7 @@ class _ParticlePainter extends CustomPainter {
   final List<_Particle> particles;
   final double progress;
 
-  _ParticlePainter({
-    required this.particles,
-    required this.progress,
-  });
+  _ParticlePainter({required this.particles, required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {

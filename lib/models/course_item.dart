@@ -1,8 +1,4 @@
-enum CourseItemType {
-  material,
-  assignment,
-  quiz,
-}
+enum CourseItemType { material, assignment, quiz }
 
 class CourseItem {
   final String id;

@@ -5,6 +5,8 @@ import '../widgets/animated_background.dart';
 import '../widgets/feature_pill.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/gradient_button.dart';
+import 'login_screen.dart';
+import 'signup_screen.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -33,15 +35,13 @@ class _LandingScreenState extends State<LandingScreen>
       curve: Curves.easeOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entranceController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _entranceController.forward();
   }
@@ -102,11 +102,7 @@ class _LandingScreenState extends State<LandingScreen>
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryIndigo,
-                AppTheme.violet,
-                AppTheme.pink,
-              ],
+              colors: [AppTheme.primaryIndigo, AppTheme.violet, AppTheme.pink],
             ),
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
@@ -155,10 +151,7 @@ class _LandingScreenState extends State<LandingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 13,
-              vertical: 9,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
             decoration: BoxDecoration(
               color: AppTheme.violet.withValues(alpha: 0.09),
               borderRadius: BorderRadius.circular(100),
@@ -278,11 +271,9 @@ class _LandingScreenState extends State<LandingScreen>
           text: 'Sign Up',
           icon: Icons.person_add_alt_1_rounded,
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Sign up screen will be added next.'),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SignupScreen()));
           },
         ),
         const SizedBox(height: 13),
@@ -291,11 +282,9 @@ class _LandingScreenState extends State<LandingScreen>
           icon: Icons.login_rounded,
           isSecondary: true,
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Login screen will be added next.'),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
           },
         ),
       ],

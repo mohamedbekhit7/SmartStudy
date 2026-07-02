@@ -30,10 +30,7 @@ class _GradientButtonState extends State<GradientButton> {
             Colors.white.withValues(alpha: 0.86),
             Colors.white.withValues(alpha: 0.62),
           ]
-        : const [
-            AppTheme.pink,
-            AppTheme.violet,
-          ];
+        : const [AppTheme.pink, AppTheme.violet];
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),

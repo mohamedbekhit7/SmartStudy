@@ -21,10 +21,9 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: softBackground,
-      textTheme: GoogleFonts.poppinsTextTheme(base.textTheme).apply(
-        bodyColor: darkText,
-        displayColor: darkText,
-      ),
+      textTheme: GoogleFonts.poppinsTextTheme(
+        base.textTheme,
+      ).apply(bodyColor: darkText, displayColor: darkText),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: darkText,
@@ -40,16 +39,11 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.55),
-          ),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.55)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(
-            color: violet,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: violet, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
