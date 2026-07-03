@@ -113,8 +113,6 @@ class _LoginScreenState extends State<LoginScreen>
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 26),
                 child: Column(
                   children: [
-                    _buildTopBar(),
-                    const SizedBox(height: 34),
                     _buildHeader(),
                     const SizedBox(height: 24),
                     GlassCard(
@@ -154,26 +152,6 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          color: AppTheme.primaryIndigo,
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(100),
-          ),
-        ),
-      ],
     );
   }
 

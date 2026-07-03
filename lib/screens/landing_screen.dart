@@ -186,50 +186,7 @@ class _LandingScreenState extends State<LandingScreen>
             ),
           ),
           const SizedBox(height: 22),
-          Row(
-            children: [
-              _buildMiniMetric('4', 'Core Modules'),
-              const SizedBox(width: 12),
-              _buildMiniMetric('2', 'User Roles'),
-              const SizedBox(width: 12),
-              _buildMiniMetric('100%', 'Local Demo'),
-            ],
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMiniMetric(String value, String label) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-                color: AppTheme.primaryIndigo,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10.5,
-                color: AppTheme.darkText.withValues(alpha: 0.58),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

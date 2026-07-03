@@ -492,13 +492,6 @@ class _CreateCourseItemScreenState extends State<CreateCourseItemScreen>
             color: Colors.white.withValues(alpha: 0.72),
             borderRadius: BorderRadius.circular(100),
           ),
-          child: const Text(
-            'Add Content',
-            style: TextStyle(
-              color: AppTheme.primaryIndigo,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
         ),
       ],
     );
